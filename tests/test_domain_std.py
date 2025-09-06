@@ -188,6 +188,42 @@ def test_glossary_warning(app, status, warning):
             "other instance in case4" in warning.getvalue())
 
 
+def test_glossary_case_sensitive_terms(app, status, warning):
+    """Test that glossary terms with different cases are not treated as duplicates."""
+    # Terms with different cases should be allowed
+    text = (".. glossary::\n"
+            "\n"
+            "   MySQL\n"
+            "       A database management system.\n"
+            "\n"
+            "   mysql\n"
+            "       The command-line tool.\n")
+    restructuredtext.parse(app, text, "case_sensitive")
+    
+    # Should not generate duplicate warnings
+    warning_text = warning.getvalue()
+    assert "duplicate term description" not in warning_text, (
+        f"Unexpected duplicate warning: {warning_text}")
+    
+    # Verify both terms are in the domain
+    objects = list(app.env.get_domain("std").get_objects())
+    mysql_objects = [obj for obj in objects if obj[0] in ('MySQL', 'mysql') and obj[2] == 'term']
+    assert len(mysql_objects) == 2, f"Expected 2 term objects, got {len(mysql_objects)}: {mysql_objects}"
+    
+    # Check that we can find both terms
+    mysql_upper = None
+    mysql_lower = None
+    for obj in mysql_objects:
+        if obj[0] == 'MySQL':
+            mysql_upper = obj
+        elif obj[0] == 'mysql':
+            mysql_lower = obj
+    
+    assert mysql_upper is not None, "MySQL term not found"
+    assert mysql_lower is not None, "mysql term not found"
+    assert mysql_upper[4] != mysql_lower[4], "Terms have the same ID, suggesting they were duplicated"
+
+
 def test_glossary_comment(app):
     text = (".. glossary::\n"
             "\n"
