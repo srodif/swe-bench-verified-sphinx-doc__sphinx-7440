@@ -305,7 +305,7 @@ def make_glossary_term(env: "BuildEnvironment", textnodes: Iterable[Node], index
         term['ids'].append(node_id)
 
     std = cast(StandardDomain, env.get_domain('std'))
-    std.note_object('term', termtext.lower(), node_id, location=term)
+    std.note_object('term', termtext, node_id, location=term)
 
     # add an index entry too
     indexnode = addnodes.index()
@@ -930,6 +930,15 @@ class StandardDomain(Domain):
         for objtype in objtypes:
             if (objtype, target) in self.objects:
                 docname, labelid = self.objects[objtype, target]
+                break
+            elif objtype == 'term':
+                # For terms, try case-insensitive lookup
+                for key in self.objects:
+                    if key[0] == 'term' and key[1].lower() == target.lower():
+                        docname, labelid = self.objects[key]
+                        break
+                else:
+                    continue
                 break
         else:
             docname, labelid = '', ''
